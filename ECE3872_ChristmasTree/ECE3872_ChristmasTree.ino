@@ -1,26 +1,26 @@
-#define ROTARY_RECORD 11
-#define ROTARY_STOP 12
-#define ROTARY_PLAY 13
 #define SPDT_PLAYMODE 4
-#define BTN_RESET 5
+#define INTERRUPT_1   2
+#define INTERRUPT_2   3
 
-#define LIVE 1
-#define RECORDING 0
+#define LIVE          1
+#define RECORDING     0
+
+volatile int state_var_0;
+volatile int state_var_1;
 
 // NOTE! Arduino Nano only has 2,3 as interrupt pins...
 
-
 void setup() {
+  updateStateVar0();
+  updateStateVar1();
   // put your setup code here, to run once:
   pinMode(ROTARY_RECORD, INPUT);
   pinMode(ROTARY_STOP, INPUT);
   pinMode(ROTARY_PLAY, INPUT);
   pinMode(SPDT_PLAYMODE, INPUT);
   pinMode(BTN_RESET, INPUT);
-  attachInterrupt(digitalPinToInterrupt(ROTARY_RECORD), stateMachineHandler(), RISING);
-  attachInterrupt(digitalPinToInterrupt(ROTARY_STOP), stateMachineHandler(), RISING);
-  attachInterrupt(digitalPinToInterrupt(ROTARY_PLAY), stateMachineHandler(), RISING);
-  attachInterrupt(digitalPinToInterrupt(BTN_RESET), resetInterruptHandler(), RISING);
+  attachInterrupt(digitalPinToInterrupt(INTERRUPT_1), updateStateVar0(), CHANGE);
+  attachInterrupt(digitalPinToInterrupt(INTERRUPT_2), updateStateVar1(), CHANGE);
 }
 
 void loop() {
@@ -28,33 +28,48 @@ void loop() {
   stateMachineHandler();
 }
 
+void updateStateVar0() {
+  state_var_0 = digitalRead(INTERRUPT_1);
+}
+
+void pdateStateVar1() {
+  state_var_1 = digitalRead(INTERRUPT_2);
+}
+
 void stateMachineHandler() {
-  if (digitalRead(ROTARY_RECORD) == HIGH) {
-    rotaryRecord();
-  } else if (digitalRead(ROTARY_STOP) == HIGH) {
-    rotaryStop();
-  } else if (digitalRead(ROTARY_PLAY) == HIGH) {
-    rotaryPlay();
-  }
-}
-
-void rotaryRecord() {
-  while (digitalRead(ROTARY_RECORD) == HIGH) {
-    recordAudioData();
-  }
-}
-
-void rotaryStop() {
-  unsigned long time_start = millis();
-  while (digitalRead(ROTARY_STOP) == HIGH || digitalRead(BTN_RESET) == HIGH) {
-    if (digitalRead(BTN_RESET) == HIGH && (millis() - time_start >= 3000)) {
-      eraseRecording();
+  if (state_var_0 == 0) {
+    if (state_var_1 == 0) {
+      reset(); // 0 0
+    } else {
+      rotaryPlay(); // 0 1
+    }
+  } else {
+    if (state_var_1 == 0) {
+      rotaryRecord(); // 1 0
+    } else {
+      rotaryStop(); // 1 1
     }
   }
 }
 
+//STATE FUNCTIONS
+
+void rotaryRecord() {
+  while (state_var_0 == 1 && state_var_1 == 0) {
+    recordAudioData();
+  }
+  stateMachineHandler();
+}
+
+void rotaryStop() {
+  while (state_var_0 == 1 && state_var_1 == 1) {
+    
+  }
+  stateMachineHandler();
+}
+
 void rotaryPlay() {
-  while (digitalRead(ROTARY_PLAY) == HIGH) {
+  while (state_var_0 == 0 && state_var_1 == 1) {
     int mode = digitalRead(SPDT_PLAYMODE);
     if (mode == LIVE) {
       playLive();
@@ -62,11 +77,20 @@ void rotaryPlay() {
       playRecording();
     }
   }
+  stateMachineHandler();
 }
 
-void resetInterruptHandler() {
-  rotaryStop();
+void reset() {
+  unsigned long time_start = millis();
+  while (state_var_0 == 0 && state_var_1 == 0) {
+    if (digitalRead(BTN_RESET) == HIGH && (millis() - time_start >= 3000)) {
+      eraseRecording();
+    }
+  }
+  stateMachineHandler();
 }
+
+// HELPER FUNCTIONS
 
 void eraseRecording() {
   
@@ -75,11 +99,11 @@ void eraseRecording() {
 void playLive() {
   moveMotors();
   lightLEDs();
-
 }
 
 void playRecording() {
-
+  moveMotors();
+  lightLEDs();
 }
 
 void recordAudioData() {
