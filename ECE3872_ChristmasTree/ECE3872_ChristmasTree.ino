@@ -71,11 +71,7 @@ void rotaryStop() {
 void rotaryPlay() {
   while (state_var_0 == 0 && state_var_1 == 1) {
     int mode = digitalRead(SPDT_PLAYMODE);
-    if (mode == LIVE) {
-      playLive();
-    } else if (mode == RECORDING) {
-      playRecording();
-    }
+    play();
   }
   stateMachineHandler();
 }
@@ -96,25 +92,36 @@ void eraseRecording() {
   
 }
 
-void playLive() {
-  moveMotors();
-  lightLEDs();
+void getFrequency() {
+  // connor
 }
 
-void playRecording() {
-  moveMotors();
-  lightLEDs();
+void play() {
+  if (mode == LIVE) {
+    moveMotors(); 
+    lightLEDs();
+    speaker(); // neel
+  } else if (mode == RECORDING) {
+    moveMotors(); 
+    lightLEDs();
+    speaker(); // neel
+  } 
 }
 
 void recordAudioData() {
+  getFrequency();
+  // connor
+}
+
+void moveMotors() { //tony
   
 }
 
-void moveMotors() {
-  
+void speaker(note) {
+  // play note?
 }
 
-void lightLEDs() {
+void lightLEDs() { //tony
   
 }
 
