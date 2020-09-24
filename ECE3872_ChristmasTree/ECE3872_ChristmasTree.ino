@@ -26,14 +26,22 @@
 #define NOTES_STORED 100
 #define NUM_LEDS 20
 
-#define A2       110.000
-#define B2       123.471
-#define C3       130.813
-#define D3       146.832
-#define E3       164.814
-#define F3       174.614
-#define G3       195.998
-#define Gs3      207.652
+// Note frequencies with their int storare mapping (#)
+// https://www.liutaiomottola.com/formulae/freqtab.htm
+#define A2       110.000  // (1)
+#define As2      116.541  // (2)
+#define B2       123.471  // (3)
+#define C3       130.813  // (4)
+#define Cs3      138.591  // (5)
+#define D3       146.832  // (6)
+#define Ds3      155.563  // (7)
+#define E3       164.814  // (8)
+#define F3       174.614  // (9)
+#define Fs3      184.997  // (10)
+#define G3       195.998  // (11)
+#define Gs3      207.652  // (12)
+
+const float freqs[] = { A2, As2, B2, C3, Cs3, D3, Ds3, E3, F3, Fs3, G3, Gs3 };
 
 // Global variables
 
@@ -48,7 +56,8 @@ Servo myservo_2_4;
 // Recording and playing back different notes
 volatile int recorded_notes[NOTES_STORED];
 volatile unsigned int idx_record = 0;
-volatile unsigned int idx_play = NOTES_STORED; // Check that this idx is in bounds before playing!
+volatile unsigned int idx_play = 0; // Check that this idx is in bounds before playing!
+volatile bool is_recorded_data = false;
 
 // NOTE! Arduino Nano only has 2,3 as interrupt pins...
 
@@ -63,7 +72,7 @@ void setup() {
   pinMode(STATE_LED, OUTPUT);
   
   
-//  eraseRecording();
+  eraseRecording();
   updateStateVar0();
   updateStateVar1();
 
@@ -129,16 +138,18 @@ void rotaryRecord() {
     Serial.print("RECORD STATE\n");
     digitalWrite(STATE_LED, HIGH);
     recordAudioData();
-    delay(300); // these will mess up recording of notes. Once recordAudioData() is populated, should take enough time to replicate blink effect
+    delay(240); // these will mess up recording of notes. Once recordAudioData() is populated, should take enough time to replicate blink effect
     digitalWrite(STATE_LED, LOW);
-    delay(300);
+    delay(240);
   }
+  is_recorded_data = true;
   stateMachineHandler();
 }
 
 void rotaryStop() {
+  Serial.print("STOP STATE\n");
   while (state_var_0 == 1 && state_var_1 == 1) {
-    Serial.print("STOP STATE\n");
+     // Should we do anything in stop?
   }
   stateMachineHandler();
 }
@@ -173,7 +184,7 @@ void reset() {
 
 
 
-// ----------- HELPER FUNCTIONS ---------
+// ----------- HELPER FUNCTIONS -----------
 
 /* Erase Recording
  * Connor
@@ -183,42 +194,68 @@ void reset() {
  * Params: None
  * Returns: None
  */
-
 void eraseRecording() {
-  // connor
-  //for (int i = 0; i < NOTES_STORED; ++i) {
-  //  recorded_notes = 0.0;
-  //}
-  //idx_record = 0;
-  //idx_play = NOTES_STORED;
+  // Connor
+  for (int i = 0; i < NOTES_STORED; ++i) {
+    recorded_notes[i] = 0;
+  }
+  idx_record = 0;
+  idx_play = NOTES_STORED;
+  is_recorded_data = false;
 }
 
 /* Get Frequency
- * Connor
+ *  Connor
  * 
  * Reads audio input device (mic/aux/pushbuttons) to determine frequency of desired note
+ * 
+ * SIMULATION: Gets random frequency between 108-210 Hz
  * 
  * Params: None
  * Returns: int frequency - the raw frequency value TOD
  */
-//float getFrequency() {
-//  // TODO
-//  return -1;
-//}
+float getFrequency() {
+  // SIMULATION BEHAVIOR: RANDOM NUMBER
+  return random(108.0,210);
+}
 
 
 /* Get Note From Freqency
  *  Connor
  *  
- *  Maps a given frequency to its nearest output note
+ * Maps a given frequency to its nearest output note
  *  
- *  Params: float frequency - raw frequency data
- *  Returns: The integer mapping of the nearest note to the input frequncy
+ * Params: float frequency - raw frequency data
+ * Returns: The integer mapping of the nearest note to the input frequncy
  */
-//int getNoteFromFrequency(float freq) {
-//  // TODO
+int getNoteFromFrequency(float freq) {
+    // Separate frequencies into bins with cutoffs as geometric mean of two frequencies
+    if (freq < 113.223) return 1;
+    else if (freq < 119.956) return 2;
+    else if (freq < 127.089) return 3;
+    else if (freq < 134.646) return 4;
+    else if (freq < 142.652) return 5;
+    else if (freq < 151.134) return 6;
+    else if (freq < 160.122) return 7;
+    else if (freq < 169.643) return 8;
+    else if (freq < 179.731) return 9;
+    else if (freq < 190.418) return 10;
+    else if (freq < 201.741) return 11;
+    else /*if (freq < 119.956)*/ return 12;
 //  return -1; 
-//}
+}
+
+/* Get Frequency from Note
+ *  Connor
+ *  
+ * Provides the frequency of a note's mapping
+ *  
+ * Params: int note - encoded note data
+ * Returns: frequency corresponding to that note
+ */
+inline float getFrequencyFromNote(int note) {
+  return freqs[note-1];
+}
 
 
 /* Get Next Recorded Note
@@ -229,12 +266,12 @@ void eraseRecording() {
  * Params: None
  * Returns: Integer encoding of the next recorded note for playback
  */
-//int getNextRecordedNote() {
-//  if (idx_play < idx_record && idx_play < NOTES_STORED)
-//    return recorded_notes[idx_play++];
-//  else 
-//    return -1; // Error code
-//}
+int getNextRecordedNote() {
+  if (idx_play < idx_record && idx_play < NOTES_STORED)
+    return recorded_notes[idx_play++ % idx_record];
+  else 
+    return -1; // Error code - no more data
+}
 
 
 /* Set Next Recorded Note
@@ -245,25 +282,24 @@ void eraseRecording() {
  * Params: int note - the next note to record
  * Returns: int status - 0 if successful, -1 if out of recording space
  */
-//int setNextRecordedNote(int note) {
-//  if (idx_record < NOTES_STORED) {
-//    recorded_notes[idx_record++] = note;
-//    return 0;
-//  }
-//    return -1; // Error code
-//}
+int setNextRecordedNote(int note) {
+  if (idx_record < NOTES_STORED) {
+    recorded_notes[idx_record++] = note;
+    return 0;
+  }
+    return -1; // Error code
+}
 
 
 void play(int mode) {
   int note;
   if (mode == LIVE) {
     // Live
-//    note = getNoteFromFrequency(getFrequency());
+    note = getNoteFromFrequency(getFrequency());
     note = 1;
   } else {
     // Recording
-//    note = getNextRecordedNote();
-    note = 2;
+    note = getNextRecordedNote();
   } 
   moveMotors(note); 
   lightLEDs(note);
@@ -280,11 +316,11 @@ void play(int mode) {
  * Returns: None
  */
 void recordAudioData() {
-  //float freq = getFrequency();
-  //int note = getNoteFromFrequency(freq);
-  //if (setNextRecordedNote(note) == -1) {
-    // TODO: what to do if you're out of space?
-  //}
+  float freq = getFrequency();
+  int note = getNoteFromFrequency(freq);
+  if (setNextRecordedNote(note) == -1) {
+     //TODO: what to do if you're out of space?
+  }
   // connor
 }
 
@@ -307,22 +343,26 @@ void speaker(int note) {
   //int volumeReading = analogRead(POT);
   //byte pwm = map(volumeReading, 0, 1024, 0, 220);
   //analogWrite(VOL, pwm);
-  tone(VOL, A2, 500);
-  delay(1000);
-  tone(VOL, B2, 500);
-  delay(1000);
-  tone(VOL, C3, 500);
-  delay(1000);
-  tone(VOL, D3, 500);
-  delay(1000);
-  tone(VOL, E3, 500);
-  delay(1000);
-  tone(VOL, F3, 500);
-  delay(1000);
-  tone(VOL, G3, 500);
-  delay(1000);
-  tone(VOL, Gs3, 500);
-  delay(1000);
+
+  tone(VOL, getFrequencyFromNote(note), 500);
+
+//  // Simulation testing
+//  tone(VOL, A2, 500);
+//  delay(1000);
+//  tone(VOL, B2, 500);
+//  delay(1000);
+//  tone(VOL, C3, 500);
+//  delay(1000);
+//  tone(VOL, D3, 500);
+//  delay(1000);
+//  tone(VOL, E3, 500);
+//  delay(1000);
+//  tone(VOL, F3, 500);
+//  delay(1000);
+//  tone(VOL, G3, 500);
+//  delay(1000);
+//  tone(VOL, Gs3, 500);
+//  delay(1000);
 
   // play note?
 }
