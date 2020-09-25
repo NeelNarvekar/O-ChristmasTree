@@ -88,7 +88,6 @@ void loop() {
 }
 
 void updateStateVar1() {
-  //Serial.print("INTERRUPT FIRED 1");
   state_var_0 = digitalRead(INTERRUPT_1);
   digitalWrite(STATE_LED, LOW);
   digitalWrite(RESET_LED, LOW);
@@ -190,7 +189,7 @@ void eraseRecording() {
     recorded_notes[i] = 0;
   }
   idx_record = 0;
-  idx_play = NOTES_STORED;
+  idx_play = 0;
   is_recorded_data = false;
 }
 
@@ -257,10 +256,13 @@ inline float getFrequencyFromNote(int note) {
  * Returns: Integer encoding of the next recorded note for playback
  */
 int getNextRecordedNote() {
-  if (idx_play < idx_record && idx_play < NOTES_STORED)
-    return recorded_notes[idx_play++ % idx_record];
-  else 
+  if (idx_play < idx_record && idx_play < NOTES_STORED) {
+    int note = recorded_notes[idx_play++ % idx_record];
+    idx_play = idx_play == idx_record ? idx_play = 0 : idx_play;
+    return note;
+  }  else {
     return -1; // Error code - no more data
+  }
 }
 
 
@@ -275,6 +277,7 @@ int getNextRecordedNote() {
 int setNextRecordedNote(int note) {
   if (idx_record < NOTES_STORED) {
     recorded_notes[idx_record++] = note;
+    //Serial.print(idx_record);
     return 0;
   }
     return -1; // Error code
