@@ -68,7 +68,7 @@ void setup() {
   strip.begin();
   strip.show();
   Serial.begin(9600);
-  pinMode(PLAY, INPUT);
+  pinMode(STOP, INPUT);
   pinMode(STATE_LED, OUTPUT);
   
   eraseRecording();
@@ -76,8 +76,6 @@ void setup() {
   updateStateVar2();
 
   pinMode(SPDT_PLAYMODE, INPUT);
-  pinMode(INTERRUPT_1, INPUT_PULLUP);
-  pinMode(INTERRUPT_2, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(INTERRUPT_1), updateStateVar1, CHANGE);
   attachInterrupt(digitalPinToInterrupt(INTERRUPT_2), updateStateVar2, CHANGE);
 }
@@ -112,10 +110,12 @@ void stateMachineHandler() {
   } else {
     if (state_var_1 == 0) {
       rotaryRecord(); // 1 0
-      //Serial.print("1 0\n");
+        //Serial.print("1 0\n");
     } else {
-      rotaryStop(); // 1 1
-      //Serial.print("1 1\n");
+      if (digitalRead(STOP) == 0) {
+        rotaryStop(); // 1 1
+        //Serial.print("1 1\n");
+      }
     }
   }
 }
