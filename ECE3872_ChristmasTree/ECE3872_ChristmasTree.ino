@@ -327,14 +327,37 @@ void recordAudioData() {
 void moveMotors(int note) { //tony
   Serial.print("MADE IT TO MOVE\n");
   if (note == 1) {
-    myservo_1_3.write(200);
-    Serial.print("MADE IT TO WRITE SERVO\n");
-    delay(1000);
-    myservo_1_3.write(0);
+    myservo_1_3.write(90);
+    myservo_2_4.write(90);
+    Serial.print("Move note: 1\n");
   } else if (note == 2) {
-    myservo_2_4.write(200);
-    delay(1000);
-    myservo_2_4.write(0);
+    myservo_1_3.write(100);
+    myservo_2_4.write(80);
+    Serial.print("Move note: 2\n");
+  } else if (note == 3) {
+  	myservo_1_3.write(110);
+    myservo_2_4.write(70);
+    Serial.print("Move note: 3\n");
+  } else if (note == 4) {
+  	myservo_1_3.write(120);
+    myservo_2_4.write(60);
+    Serial.print("Move note: 4\n");
+  } else if (note == 5) {
+  	myservo_1_3.write(130);
+    myservo_2_4.write(50);
+    Serial.print("Move note: 5\n");
+  } else if (note == 6) {
+  	myservo_1_3.write(140);
+    myservo_2_4.write(40);
+    Serial.print("Move note: 6\n");
+  } else if (note == 7) {
+  	myservo_1_3.write(150);
+    myservo_2_4.write(30);
+    Serial.print("Move note: 7\n");
+  } else if (note == 8) {
+  	myservo_1_3.write(160);
+    myservo_2_4.write(20);
+    Serial.print("Move note: 8\n");
   }
   return;
 }
@@ -368,13 +391,40 @@ void speaker(int note) {
 }
 
 void lightLEDs(int note) { //tony
-  for (int i = 0; i < NUM_LEDS; i++) {
-  strip.setPixelColor(i, 255, 0, 0);
-  strip.show();
-  delay(100);
-  // set pixel to off, delay(1000)
-  strip.setPixelColor(i, 0, 0, 0);
-  strip.show();
-  delay(100);
+	Serial.print("MADE IT TO LIGHTLEDS\n");
+  if (note == 1) {
+  	strip.clear();
+    strip.setPixelColor(1, 255, 0, 0);
+    Serial.print("LEDS note: 1\n");
+  } else if (note == 2) {
+  	strip.clear();
+    strip.setPixelColor(2, 255, 0, 0);
+    Serial.print("LEDS note: 2\n");
+  } else if (note == 3) {
+  	strip.clear();
+  	strip.setPixelColor(3, 255, 0, 0);
+    Serial.print("LEDS note: 3\n");
+  } else if (note == 4) {
+  	strip.clear();
+  	strip.setPixelColor(4, 255, 0, 0);
+    Serial.print("LEDS note: 4\n");
+  } else if (note == 5) {
+  	strip.clear();
+  	strip.setPixelColor(5, 255, 0, 0);
+    Serial.print("LEDS note: 5\n");
+  } else if (note == 6) {
+  	strip.clear();
+  	strip.setPixelColor(6, 255, 0, 0);
+    Serial.print("LEDS note: 6\n");
+  } else if (note == 7) {
+  	strip.clear();
+  	strip.setPixelColor(7, 255, 0, 0);
+    Serial.print("LEDS note: 7\n");
+  } else if (note == 8) {
+  	strip.clear();
+  	strip.setPixelColor(8, 255, 0, 0);
+    Serial.print("LEDS note: 8\n");
   }
+  strip.show()
+  return;
 }
