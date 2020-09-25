@@ -133,9 +133,9 @@ void stateMachineHandler() {
 //STATE FUNCTIONS
 
 void rotaryRecord() {
+  Serial.print("RECORD STATE\n");
   // if out of space then hold solid LED
   while (state_var_0 == 1 && state_var_1 == 0) { // enter while loop if room to record
-    Serial.print("RECORD STATE\n");
     digitalWrite(STATE_LED, HIGH);
     recordAudioData();
     delay(240); // these will mess up recording of notes. Once recordAudioData() is populated, should take enough time to replicate blink effect
@@ -155,9 +155,9 @@ void rotaryStop() {
 }
 
 void rotaryPlay() {
+  Serial.print("PLAY STATE\n");
   while (state_var_0 == 0 && state_var_1 == 1 && digitalRead(PLAY) == 1) {
     digitalWrite(STATE_LED, HIGH);
-    Serial.print("PLAY STATE\n");
     int mode = digitalRead(SPDT_PLAYMODE);
     play(mode);
   }
@@ -166,11 +166,11 @@ void rotaryPlay() {
 }
 
 void reset() {
+  Serial.print("RESET STATE\n");
   unsigned long time_start = millis();
   while (state_var_0 == 0 && state_var_1 == 0) {
     digitalWrite(RESET_LED, HIGH);
-    Serial.print("RESET STATE\n");
-    if (millis() - time_start >= 3000) {
+    if (millis() - time_start >= 3000 && is_recorded_data) {
       Serial.print("ERASING RECORDING\n");
       eraseRecording();
     }
@@ -310,14 +310,19 @@ void play(int mode) {
 /* Record Audio Data
  *  Connor
  *  
+ * SIMULATION: Records notes in sequence of 1-12
+ *  
  * Calculates current frequency, retrieves the note, and stores it
  * 
  * Params: None
  * Returns: None
  */
 void recordAudioData() {
-  float freq = getFrequency();
-  int note = getNoteFromFrequency(freq);
+  // Uncomment vvv these vvv for actual hardware
+  //float freq = getFrequency();
+  //int note = getNoteFromFrequency(freq);
+  // SIMULATION BEHVAIOIR: Record notes in repeating sequence 1-12
+  int note = idx_record % 12 + 1;
   if (setNextRecordedNote(note) == -1) {
      //TODO: what to do if you're out of space?
   }
@@ -325,40 +330,58 @@ void recordAudioData() {
 }
 
 void moveMotors(int note) { //tony
-  Serial.print("MADE IT TO MOVE\n");
-  if (note == 1) {
+  Serial.print("Move Motors\n");
+  myservo_1_3.write(82.5+7.5*note);
+  myservo_2_4.write(97.5-7.5*note);
+/*  if (note == 1) { // A
     myservo_1_3.write(90);
     myservo_2_4.write(90);
     Serial.print("Move note: 1\n");
-  } else if (note == 2) {
-    myservo_1_3.write(100);
-    myservo_2_4.write(80);
+  } else if (note == 2) { //A#
+    myservo_1_3.write(98);
+    myservo_2_4.write(82);
     Serial.print("Move note: 2\n");
-  } else if (note == 3) {
-  	myservo_1_3.write(110);
-    myservo_2_4.write(70);
+  } else if (note == 3) { // B
+  	myservo_1_3.write(106);
+    myservo_2_4.write(74);
     Serial.print("Move note: 3\n");
-  } else if (note == 4) {
-  	myservo_1_3.write(120);
-    myservo_2_4.write(60);
+  } else if (note == 4) { // C
+  	myservo_1_3.write(114);
+    myservo_2_4.write(66);
     Serial.print("Move note: 4\n");
-  } else if (note == 5) {
+  } else if (note == 5) { // C#
+  	myservo_1_3.write(122);
+    myservo_2_4.write(58);
+    Serial.print("Move note: 5\n");
+  } else if (note == 6) { // D
   	myservo_1_3.write(130);
     myservo_2_4.write(50);
-    Serial.print("Move note: 5\n");
-  } else if (note == 6) {
-  	myservo_1_3.write(140);
-    myservo_2_4.write(40);
     Serial.print("Move note: 6\n");
-  } else if (note == 7) {
-  	myservo_1_3.write(150);
-    myservo_2_4.write(30);
+  } else if (note == 7) { // D#
+  	myservo_1_3.write(138);
+    myservo_2_4.write(42);
     Serial.print("Move note: 7\n");
-  } else if (note == 8) {
-  	myservo_1_3.write(160);
-    myservo_2_4.write(20);
+  } else if (note == 8) { // E
+  	myservo_1_3.write(146);
+    myservo_2_4.write(34);
     Serial.print("Move note: 8\n");
-  }
+  } else if (note == 9) { // F
+    myservo_1_3.write(154);
+    myservo_2_4.write(26);
+    Serial.print("Move note: 9\n");
+  } else if (note == 10) { // F#
+    myservo_1_3.write(162);
+    myservo_2_4.write(18);
+    Serial.print("Move note: 10\n");
+  } else if (note == 11) { // G
+    myservo_1_3.write(170);
+    myservo_2_4.write(10);
+    Serial.print("Move note: 11\n");
+  } else if (note == 12) { // G#
+    myservo_1_3.write(178);
+    myservo_2_4.write(2);
+    Serial.print("Move note: 12\n");
+  } */
   return;
 }
 
@@ -369,29 +392,14 @@ void speaker(int note) {
 
   tone(VOL, getFrequencyFromNote(note), 500);
 
-//  // Simulation testing
-//  tone(VOL, A2, 500);
-//  delay(1000);
-//  tone(VOL, B2, 500);
-//  delay(1000);
-//  tone(VOL, C3, 500);
-//  delay(1000);
-//  tone(VOL, D3, 500);
-//  delay(1000);
-//  tone(VOL, E3, 500);
-//  delay(1000);
-//  tone(VOL, F3, 500);
-//  delay(1000);
-//  tone(VOL, G3, 500);
-//  delay(1000);
-//  tone(VOL, Gs3, 500);
-//  delay(1000);
-
   // play note?
 }
 
 void lightLEDs(int note) { //tony
-	Serial.print("MADE IT TO LIGHTLEDS\n");
+	Serial.print("LEDs!\n");
+  strip.clear();
+  strip.setPixelColor(note, 255, 0, 0);
+  /*
   if (note == 1) {
   	strip.clear();
     strip.setPixelColor(1, 255, 0, 0);
@@ -424,7 +432,24 @@ void lightLEDs(int note) { //tony
   	strip.clear();
   	strip.setPixelColor(8, 255, 0, 0);
     Serial.print("LEDS note: 8\n");
+  } else if (note == 9) {
+    strip.clear();
+    strip.setPixelColor(9, 255, 0, 0);
+    Serial.print("LEDS note: 5\n");
+  } else if (note == 10) {
+    strip.clear();
+    strip.setPixelColor(10, 255, 0, 0);
+    Serial.print("LEDS note: 6\n");
+  } else if (note == 11) {
+    strip.clear();
+    strip.setPixelColor(11, 255, 0, 0);
+    Serial.print("LEDS note: 7\n");
+  } else if (note == 12) {
+    strip.clear();
+    strip.setPixelColor(12, 255, 0, 0);
+    Serial.print("LEDS note: 8\n");
   }
-  strip.show()
+  */
+  strip.show();
   return;
 }
