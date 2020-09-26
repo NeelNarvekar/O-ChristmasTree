@@ -396,7 +396,7 @@ void recordAudioData() {
  * Params: int note - the next note to move servos based on
  * Returns: None
  */
-void moveMotors(int note) { //tony
+void moveMotors(int note) {
   Serial.print("Move Motors\n");
   myservo_1_3.write(82.5+7.5*note);
   myservo_2_4.write(97.5-7.5*note);
@@ -472,7 +472,7 @@ void speaker(int note) {
  * Params: int note - the next note to change LED colors based on
  * Returns: None
  */
-void lightLEDs(int note) { //tony
+void lightLEDs(int note) {
   Serial.print("LEDs: note ");
   Serial.print(note);
   Serial.print("\n");
