@@ -85,35 +85,59 @@ void loop() {
   stateMachineHandler();
 }
 
+/* Update State Var 1
+ *  
+ * 
+ * Interrupt triggered when rotary switch turned or reset button pressed, updates state and resets state LEDs
+ *
+ * Params: None
+ * Returns: None
+ */
 void updateStateVar1() {
   state_var_0 = digitalRead(INTERRUPT_1);
   digitalWrite(STATE_LED, LOW);
   digitalWrite(RESET_LED, LOW);
 }
 
+/* Update State Var 2
+ *  
+ * 
+ * Interrupt triggered when rotary switch turned or reset button pressed, updates state and resets state LEDs
+ *
+ * Params: None
+ * Returns: None
+ */
 void updateStateVar2() {
   state_var_1 = digitalRead(INTERRUPT_2);
   digitalWrite(STATE_LED, LOW);
   digitalWrite(RESET_LED, LOW);
 }
 
+/* State Machine Handler
+ *  
+ * 
+ * State Machine handler, constantly updating current state
+ *
+ * Params: None
+ * Returns: None
+ */
 void stateMachineHandler() {
   
   if (state_var_0 == 0) {
     if (state_var_1 == 0) {
-      reset(); // 0 0
+      reset(); // 0 0 -> RESET STATE
       //Serial.print("0 0\n");
     } else {
-      rotaryPlay(); // 0 1
+      rotaryPlay(); // 0 1 -> PLAY STATE
       //Serial.print("0 1\n");
     }
   } else {
     if (state_var_1 == 0) {
-      rotaryRecord(); // 1 0
+      rotaryRecord(); // 1 0 -> RECORD STATE
         //Serial.print("1 0\n");
     } else {
       if (digitalRead(STOP) == 0) {
-        rotaryStop(); // 1 1
+        rotaryStop(); // 1 1 -> STOP STATE
         //Serial.print("1 1\n");
       }
     }
@@ -122,6 +146,14 @@ void stateMachineHandler() {
 
 //STATE FUNCTIONS
 
+/* Rotary Record 
+ *  
+ * 
+ * State Machine stop function triggered when rotary switch set to record
+ *
+ * Params: None
+ * Returns: None
+ */
 void rotaryRecord() {
   Serial.print("RECORD STATE\n");
   // if out of space then hold solid LED
@@ -136,6 +168,14 @@ void rotaryRecord() {
   stateMachineHandler();
 }
 
+/* Rotary Stop 
+ *  
+ * 
+ * State Machine stop function triggered when rotary switch set to stop
+ *
+ * Params: None
+ * Returns: None
+ */
 void rotaryStop() {
   Serial.print("STOP STATE\n");
   while (state_var_0 == 1 && state_var_1 == 1) {
@@ -144,23 +184,39 @@ void rotaryStop() {
   stateMachineHandler();
 }
 
+/* Rotary Play 
+ *  
+ * 
+ * State Machine play function triggered when rotary switch set to play
+ *
+ * Params: None
+ * Returns: None
+ */
 void rotaryPlay() {
   Serial.print("PLAY STATE\n");
   while (state_var_0 == 0 && state_var_1 == 1) {
     digitalWrite(STATE_LED, HIGH);
-    int mode = digitalRead(SPDT_PLAYMODE);
-    play(mode);
+    int mode = digitalRead(SPDT_PLAYMODE); 
+    play(mode); // based on mode will play live or from recording
   }
   digitalWrite(STATE_LED, LOW);
   stateMachineHandler();
 }
 
+/* Reset 
+ *  
+ * 
+ * State Machine reset function triggered when reset button pressed
+ *
+ * Params: None
+ * Returns: None
+ */
 void reset() {
   Serial.print("RESET STATE\n");
   unsigned long time_start = millis();
   while (state_var_0 == 0 && state_var_1 == 0) {
     digitalWrite(RESET_LED, HIGH);
-    if (millis() - time_start >= 3000 && is_recorded_data) {
+    if (millis() - time_start >= 3000 && is_recorded_data) { // if reset held down for > 3s, recording erased
       Serial.print("ERASING RECORDING\n");
       eraseRecording();
     }
@@ -177,7 +233,7 @@ void reset() {
 // ----------- HELPER FUNCTIONS -----------
 
 /* Erase Recording
- * Connor
+ *
  * 
  * Clears the recorded notes array and resets the record/play indices
  * 
@@ -194,7 +250,7 @@ void eraseRecording() {
 }
 
 /* Get Frequency
- *  Connor
+ * 
  * 
  * Reads audio input device (mic/aux/pushbuttons) to determine frequency of desired note
  * 
@@ -210,7 +266,7 @@ float getFrequency() {
 
 
 /* Get Note From Freqency
- *  Connor
+ * 
  *  
  * Maps a given frequency to its nearest output note
  *  
@@ -235,7 +291,7 @@ int getNoteFromFrequency(float freq) {
 }
 
 /* Get Frequency from Note
- *  Connor
+ * 
  *  
  * Provides the frequency of a note's mapping
  *  
@@ -248,7 +304,7 @@ inline float getFrequencyFromNote(int note) {
 
 
 /* Get Next Recorded Note
- *  Connor
+ * 
  *  
  * Gives the next note in the recording (if applicable) and increments the playback index
  * 
@@ -267,7 +323,7 @@ int getNextRecordedNote() {
 
 
 /* Set Next Recorded Note
- *  Connor
+ * 
  *  
  * Writes the next recorded note to the note storage array
  * 
@@ -284,6 +340,14 @@ int setNextRecordedNote(int note) {
 }
 
 
+/* Play
+ *  
+ *  
+ * Plays notes from speaker live or from recording based on mode
+ * 
+ * Params: int mode - read from the slide switch controlling play live or play from recording
+ * Returns: None
+ */
 void play(int mode) {
   int note;
   if (mode == LIVE) {
@@ -301,7 +365,7 @@ void play(int mode) {
 
 
 /* Record Audio Data
- *  Connor
+ * 
  *  
  * SIMULATION: Records notes in sequence of 1-12
  *  
@@ -322,10 +386,17 @@ void recordAudioData() {
   if (setNextRecordedNote(note) == -1) {
      //TODO: what to do if you're out of space?
   }
-  // connor
 }
 
-void moveMotors(int note) { //tony
+/* Move Motors
+ *  
+ *  
+ * Moves both servo motors to a set position based on the note
+ * 
+ * Params: int note - the next note to move servos based on
+ * Returns: None
+ */
+void moveMotors(int note) {
   Serial.print("Move Motors\n");
   myservo_1_3.write(82.5+7.5*note);
   myservo_2_4.write(97.5-7.5*note);
@@ -382,6 +453,12 @@ void moveMotors(int note) { //tony
   return;
 }
 
+/* Speaker 
+ *  
+ * 
+ * Params: int note - the next note to play on the speaker
+ * Returns: None
+ */
 void speaker(int note) {
   //int volumeReading = analogRead(POT);
   //byte pwm = map(volumeReading, 0, 1024, 0, 220);
@@ -389,7 +466,13 @@ void speaker(int note) {
   tone(VOL, getFrequencyFromNote(note), 500);
 }
 
-void lightLEDs(int note) { //tony
+/* Light LEDs 
+ *  
+ * 
+ * Params: int note - the next note to change LED colors based on
+ * Returns: None
+ */
+void lightLEDs(int note) {
   Serial.print("LEDs: note ");
   Serial.print(note);
   Serial.print("\n");
