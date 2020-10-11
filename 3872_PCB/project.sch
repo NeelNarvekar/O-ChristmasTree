@@ -3707,6 +3707,20 @@ Based on the following sources:
 <text x="226.06" y="53.34" size="1.778" layer="91">Play Live/Recording</text>
 <text x="340.36" y="91.44" size="1.778" layer="91">Speaker</text>
 <text x="378.46" y="91.44" size="1.778" layer="91">TOF Sensor</text>
+<text x="22.86" y="93.98" size="1.778" layer="91">Female header pins for Arduino Nano.
+The microcontroller will get power from
+the 5V into the board</text>
+<text x="119.38" y="33.02" size="1.778" layer="91">STOP is not used and the terminal block
+will be left depopulated unless we find a
+need for it.</text>
+<text x="147.32" y="96.52" size="1.778" layer="91">Both servos use the same
+power terminal block</text>
+<text x="233.68" y="73.66" size="1.778" layer="91">Pin 2 is left unconnected and will
+be a spare pin if needed</text>
+<text x="266.7" y="60.96" size="1.778" layer="91">Three State LEDs all connect
+to the same GND pin</text>
+<text x="304.8" y="93.98" size="1.778" layer="91">Room for a RC filter/voltage
+divider if needed</text>
 </plain>
 <instances>
 <instance part="JP1" gate="A" x="17.78" y="69.85" smashed="yes">
@@ -3781,6 +3795,9 @@ Based on the following sources:
 </instance>
 <instance part="GND1" gate="1" x="320.04" y="71.12" smashed="yes">
 <attribute name="VALUE" x="317.5" y="68.58" size="1.778" layer="96"/>
+</instance>
+<instance part="IC1" gate="P" x="40.64" y="17.78" smashed="yes">
+<attribute name="NAME" x="40.005" y="17.145" size="1.778" layer="95"/>
 </instance>
 </instances>
 <busses>
@@ -3999,6 +4016,11 @@ Based on the following sources:
 <wire x1="222.25" y1="60.96" x2="222.25" y2="66.04" width="0.1524" layer="91"/>
 <wire x1="222.25" y1="66.04" x2="223.52" y2="66.04" width="0.1524" layer="91"/>
 <pinref part="P+5" gate="1" pin="+5V"/>
+</segment>
+<segment>
+<pinref part="IC1" gate="P" pin="VCC"/>
+<wire x1="40.64" y1="25.4" x2="50.8" y2="25.4" width="0.1524" layer="91"/>
+<label x="48.26" y="25.4" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="A7" class="0">
@@ -4248,6 +4270,10 @@ Based on the following sources:
 </schematic>
 </drawing>
 <compatibility>
+<note version="6.3" minversion="6.2.2" severity="warning">
+Since Version 6.2.2 text objects can contain more than one line,
+which will not be processed correctly with this version.
+</note>
 <note version="8.2" severity="warning">
 Since Version 8.2, EAGLE supports online libraries. The ids
 of those online libraries will not be understood (or retained)

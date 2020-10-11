@@ -3660,7 +3660,8 @@ Based on the following sources:
 <variantdefs>
 </variantdefs>
 <classes>
-<class number="0" name="default" width="0" drill="0">
+<class number="0" name="default" width="0.3048" drill="0.508">
+<clearance class="0" value="0.254"/>
 </class>
 </classes>
 <parts>
@@ -3872,11 +3873,6 @@ Based on the following sources:
 <pinref part="JP1" gate="A" pin="13"/>
 <wire x1="15.24" y1="57.15" x2="29.21" y2="57.15" width="0.1524" layer="91"/>
 <label x="29.21" y="57.15" size="1.778" layer="95"/>
-</segment>
-<segment>
-<pinref part="JP2" gate="A" pin="13"/>
-<wire x1="52.07" y1="57.15" x2="66.04" y2="57.15" width="0.1524" layer="91"/>
-<label x="66.04" y="57.15" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="GND" class="0">
@@ -4239,6 +4235,13 @@ Based on the following sources:
 <wire x1="318.77" y1="86.36" x2="318.77" y2="87.63" width="0.1524" layer="91"/>
 <wire x1="318.77" y1="87.63" x2="317.5" y2="87.63" width="0.1524" layer="91"/>
 <junction x="317.5" y="87.63"/>
+</segment>
+</net>
+<net name="RST1" class="0">
+<segment>
+<pinref part="JP2" gate="A" pin="13"/>
+<wire x1="52.07" y1="57.15" x2="66.04" y2="57.15" width="0.1524" layer="91"/>
+<label x="66.04" y="57.15" size="1.778" layer="95"/>
 </segment>
 </net>
 </nets>
