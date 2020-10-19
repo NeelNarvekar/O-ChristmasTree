@@ -2,10 +2,10 @@
 #include <Servo.h>
 
 // Digital Pin Definitions
-#define ECHO          0
-#define TRIG          1
-#define INTERRUPT_1   2
-#define INTERRUPT_2   3
+#define SONAR_ECHO    0
+#define SONAR_TRIG    1
+#define INTERRUPT_1   2 // RESET * PLAY
+#define INTERRUPT_2   3 // RESET * RECORD
 #define SPDT_PLAYMODE 4
 #define RESET_LED     5
 #define SERVO_1_3     6
@@ -15,16 +15,16 @@
 #define SERVO_2_4     10
  // space for 11!
 #define STOP          12
-#define LED           13
+#define LED           13 // Neopixel LED strip
 
-// Analog Pin Definitions
-#define POT           A0
 
 // Values
 #define LIVE          1
 #define RECORDING     0
 #define NOTES_STORED  100
 #define NUM_LEDS      20
+#define MAX_DISTANCE  20.0 // Furthest distance the Sonar sensor will read (cm)
+
 
 // Note frequencies with their int storare mapping (#)
 // https://www.liutaiomottola.com/formulae/freqtab.htm
@@ -62,7 +62,7 @@ volatile bool is_recorded_data = false;
 // NOTE! Arduino Nano only has 2,3 as interrupt pins...
 
 void setup() {
-  // put your setup code here, to run once:
+  // Set GPIO pins to their proper mode
   myservo_1_3.attach(6);
   myservo_2_4.attach(10);
   strip.begin();
@@ -70,25 +70,28 @@ void setup() {
   Serial.begin(9600);
   pinMode(STOP, INPUT);
   pinMode(STATE_LED, OUTPUT);
+  pinMode(SONAR_TRIG, OUTPUT);
+  pinMode(SONAR_ECHO, INPUT);
   
-  eraseRecording();
-  updateStateVar1();
-  updateStateVar2();
-
   pinMode(SPDT_PLAYMODE, INPUT);
   attachInterrupt(digitalPinToInterrupt(INTERRUPT_1), updateStateVar1, CHANGE);
   attachInterrupt(digitalPinToInterrupt(INTERRUPT_2), updateStateVar2, CHANGE);
+  
+  eraseRecording();
+  updateStateVar1(); 
+  updateStateVar2();
+
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  // Main program loop to run infinitely
   stateMachineHandler();
 }
 
 /* Update State Var 1
  *  
- * 
  * Interrupt triggered when rotary switch turned or reset button pressed, updates state and resets state LEDs
+ *  RESET * PLAY
  *
  * Params: None
  * Returns: None
@@ -101,8 +104,8 @@ void updateStateVar1() {
 
 /* Update State Var 2
  *  
- * 
  * Interrupt triggered when rotary switch turned or reset button pressed, updates state and resets state LEDs
+ *  RESET * RECORD
  *
  * Params: None
  * Returns: None
@@ -115,14 +118,13 @@ void updateStateVar2() {
 
 /* State Machine Handler
  *  
- * 
- * State Machine handler, constantly updating current state
+ *  State Machine handler, constantly updating current state based on interrupt variables
  *
  * Params: None
  * Returns: None
  */
 void stateMachineHandler() {
-  
+  // Reads variables corresponding to INT1=REST*PLAY and INT2=RESET*RECORD 
   if (state_var_0 == 0) {
     if (state_var_1 == 0) {
       reset(); // 0 0 -> RESET STATE
@@ -144,7 +146,7 @@ void stateMachineHandler() {
   }
 }
 
-//STATE FUNCTIONS
+// ------ STATE FUNCTIONS -------
 
 /* Rotary Record 
  *  
@@ -168,6 +170,7 @@ void rotaryRecord() {
   stateMachineHandler();
 }
 
+
 /* Rotary Stop 
  *  
  * 
@@ -183,6 +186,7 @@ void rotaryStop() {
   }
   stateMachineHandler();
 }
+
 
 /* Rotary Play 
  *  
@@ -202,6 +206,7 @@ void rotaryPlay() {
   digitalWrite(STATE_LED, LOW);
   stateMachineHandler();
 }
+
 
 /* Reset 
  *  
@@ -233,9 +238,8 @@ void reset() {
 // ----------- HELPER FUNCTIONS -----------
 
 /* Erase Recording
- *
  * 
- * Clears the recorded notes array and resets the record/play indices
+ *  Clears the recorded notes array and resets the record/play indices
  * 
  * Params: None
  * Returns: None
@@ -249,25 +253,46 @@ void eraseRecording() {
   is_recorded_data = false;
 }
 
+
+/* Read Sonar cm
+ *  
+ *  Blocking call to measure distance on sonar 
+ *  
+ * Params: None
+ * Returns: Distance (in cm) measured from front of sonar sensor
+ */
+unsigned long read_sonar_cm() {
+  digitalWrite(SONAR_TRIG, LOW);
+  delayMicroseconds(2);
+  digitalWrite(SONAR_TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(SONAR_TRIG, LOW);
+  unsigned long cm = pulseIn(SONAR_ECHO, HIGH, 300000) / 58;
+//  Serial.print(cm);
+//  Serial.print(" cm - ");
+  return cm; // Distance in cm
+}
+
+
 /* Get Frequency
  * 
+ * Reads and scaled Sonar distance input to determine frequency of desired note
+ * Frequency determined on continuous scale before conversion to note
  * 
- * Reads audio input device (mic/aux/pushbuttons) to determine frequency of desired note
- * 
- * SIMULATION: Gets random frequency between 108-210 Hz
  * 
  * Params: None
  * Returns: int frequency - the raw frequency value TOD
  */
 float getFrequency() {
-  // SIMULATION BEHAVIOR: RANDOM NUMBER
-  return random(108.0,210);
+  // TODO: this function scales notes/frequencies in geometric fashion like a guitar string
+  //  Should it be changed to provide a linear relationship between distance and note?
+  float freq = 107.0 * (((float) read_sonar_cm()) / MAX_DISTANCE) + 108.0;
+  return freq;
 }
 
 
 /* Get Note From Freqency
  * 
- *  
  * Maps a given frequency to its nearest output note
  *  
  * Params: float frequency - raw frequency data
@@ -286,14 +311,16 @@ int getNoteFromFrequency(float freq) {
     else if (freq < 179.731) return 9;
     else if (freq < 190.418) return 10;
     else if (freq < 201.741) return 11;
-    else /*if (freq < 119.956)*/ return 12;
-//  return -1; 
+    else if (freq < 213.737) return 12;
+    // If the frequency is greater than the cutoff, don't play anything.
+    return -1; 
 }
+
 
 /* Get Frequency from Note
  * 
- *  
  * Provides the frequency of a note's mapping
+ *  Use with indices of notes as defined up top (starting with 1)
  *  
  * Params: int note - encoded note data
  * Returns: frequency corresponding to that note
@@ -305,7 +332,6 @@ inline float getFrequencyFromNote(int note) {
 
 /* Get Next Recorded Note
  * 
- *  
  * Gives the next note in the recording (if applicable) and increments the playback index
  * 
  * Params: None
@@ -324,7 +350,6 @@ int getNextRecordedNote() {
 
 /* Set Next Recorded Note
  * 
- *  
  * Writes the next recorded note to the note storage array
  * 
  * Params: int note - the next note to record
@@ -342,7 +367,6 @@ int setNextRecordedNote(int note) {
 
 /* Play
  *  
- *  
  * Plays notes from speaker live or from recording based on mode
  * 
  * Params: int mode - read from the slide switch controlling play live or play from recording
@@ -357,15 +381,15 @@ void play(int mode) {
     // Recording
     note = getNextRecordedNote();
   } 
+  if (note == -1) return; // Don't play anything if no note is returned
   moveMotors(note); 
   lightLEDs(note);
   speaker(note);
-  delay(500);
+  delay(500); // TODO: update this timing logic to account for variable code delay 
 }
 
 
 /* Record Audio Data
- * 
  *  
  * SIMULATION: Records notes in sequence of 1-12
  *  
@@ -376,10 +400,10 @@ void play(int mode) {
  */
 void recordAudioData() {
   // Uncomment vvv these vvv for actual hardware
-  //float freq = getFrequency();
-  //int note = getNoteFromFrequency(freq);
+  float freq = getFrequency();
+  int note = getNoteFromFrequency(freq);
   // SIMULATION BEHVAIOIR: Record notes in repeating sequence 1-12
-  int note = idx_record % 12 + 1;
+  //int note = idx_record % 12 + 1;
   Serial.print("Record: ");
   Serial.print(note);
   Serial.print("\n");

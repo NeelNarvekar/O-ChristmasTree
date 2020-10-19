@@ -1,17 +1,13 @@
-#include <Adafruit_MCP4725.h>
-
 // TESTING FILE, NOT ACTUAL PROJECT CODE!!
-
+#include <Adafruit_MCP4725.h>
 #include <Servo.h>
-
-
 //#include <Adafruit_NeoPixel.h>
 
 // Digital Pin Definitions
-#define ECHO          0
-#define TRIG          1
-#define INTERRUPT_1   2
-#define INTERRUPT_2   3
+#define SONAR_ECHO    0
+#define SONAR_TRIG    1
+#define INTERRUPT_1   2 // RESET * PLAY
+#define INTERRUPT_2   3 // RESET * RECORD
 #define SPDT_PLAYMODE 4
 #define RESET_LED     5
 #define SERVO_1_3     6
@@ -22,11 +18,10 @@
  // space for 11!
 #define STOP          12
 #define LED           13
-#define SONAR_TRIG    14
-#define SONAR_ECHO    15
 
-#define I2C_SDA       18 // DAC
-#define I2C_SCL       19 // DAC
+
+//#define I2C_SDA       18 // DAC
+//#define I2C_SCL       19 // DAC
 
 // Analog Pin Definitions
 #define POT           A0
