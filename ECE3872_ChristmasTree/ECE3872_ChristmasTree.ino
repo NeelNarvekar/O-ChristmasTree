@@ -167,7 +167,6 @@ void rotaryRecord() {
     delay(240);
   }
   is_recorded_data = true;
-  stateMachineHandler();
 }
 
 
@@ -184,7 +183,6 @@ void rotaryStop() {
   while (state_var_0 == 1 && state_var_1 == 1) {
      // Should we do anything in stop?
   }
-  stateMachineHandler();
 }
 
 
@@ -204,7 +202,6 @@ void rotaryPlay() {
     play(mode); // based on mode will play live or from recording
   }
   digitalWrite(STATE_LED, LOW);
-  stateMachineHandler();
 }
 
 
@@ -229,7 +226,6 @@ void reset() {
     digitalWrite(RESET_LED, LOW);
     delay(100);
   }
-  stateMachineHandler();
 }
 
 
