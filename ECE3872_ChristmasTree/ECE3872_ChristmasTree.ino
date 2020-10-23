@@ -1,5 +1,6 @@
 #include <Adafruit_NeoPixel.h>
 #include <Servo.h>
+//#include <Tone.h>
 
 // Digital Pin Definitions
 #define SONAR_ECHO    0
@@ -13,7 +14,7 @@
  // space for 8!
 #define VOL           9 // this will eventually be analog, connected to speaker
 #define SERVO_2_4     10
- // space for 11!
+#define SPEAKER       11
 #define STOP          12
 #define LED           13 // Neopixel LED strip
 
@@ -48,6 +49,7 @@ const float freqs[] = { A2, As2, B2, C3, Cs3, D3, Ds3, E3, F3, Fs3, G3, Gs3 };
 volatile int state_var_0;
 volatile int state_var_1;
 bool on = false;
+unsigned long tstart;
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, LED, NEO_GRB + NEO_KHZ800);
 
 Servo myservo_1_3;
@@ -160,11 +162,10 @@ void rotaryRecord() {
   Serial.print("RECORD STATE\n");
   // if out of space then hold solid LED
   while (state_var_0 == 1 && state_var_1 == 0) { // enter while loop if room to record
+    
     digitalWrite(STATE_LED, HIGH);
     recordAudioData();
-    delay(240); // these will mess up recording of notes. Once recordAudioData() is populated, should take enough time to replicate blink effect
     digitalWrite(STATE_LED, LOW);
-    delay(240);
   }
   is_recorded_data = true;
 }
@@ -196,12 +197,19 @@ void rotaryStop() {
  */
 void rotaryPlay() {
   Serial.print("PLAY STATE\n");
+  // OUTER LOOP OCCURS EVERY 500 MILLISECONDS
   while (state_var_0 == 0 && state_var_1 == 1) {
+    // Get start time and note
+    tstart = millis();
     digitalWrite(STATE_LED, HIGH);
     int mode = digitalRead(SPDT_PLAYMODE); 
-    play(mode); // based on mode will play live or from recording
+    play(mode); // Non-blocking!
+    // Spin until state change or time for next note
+    while (state_var_0 == 0 && state_var_1 == 1 && millis() - tstart >= 500);
   }
+  // Exit state code - turn off LED and stop the tone
   digitalWrite(STATE_LED, LOW);
+  noTone(SPEAKER);
 }
 
 
@@ -214,18 +222,21 @@ void rotaryPlay() {
  * Returns: None
  */
 void reset() {
+  tstart = millis();
+  digitalWrite(RESET_LED, HIGH);
   Serial.print("RESET STATE\n");
-  unsigned long time_start = millis();
   while (state_var_0 == 0 && state_var_1 == 0) {
-    digitalWrite(RESET_LED, HIGH);
-    if (millis() - time_start >= 3000 && is_recorded_data) { // if reset held down for > 3s, recording erased
+    // if reset held down for > 3s, recording erased
+    if (is_recorded_data && millis() - tstart >= 3000) { 
       Serial.print("ERASING RECORDING\n");
       eraseRecording();
+      digitalWrite(RESET_LED, LOW);
+      delay(100);
+      digitalWrite(RESET_LED, HIGH);
     }
-    delay(100);
-    digitalWrite(RESET_LED, LOW);
-    delay(100);
   }
+  // Exit state cleanup
+  digitalWrite(RESET_LED, LOW);
 }
 
 
@@ -370,6 +381,7 @@ int setNextRecordedNote(int note) {
  */
 void play(int mode) {
   int note;
+  // Select note from either a recording or live input
   if (mode == LIVE) {
     // Live
     note = getNoteFromFrequency(getFrequency());
@@ -380,8 +392,7 @@ void play(int mode) {
   if (note == -1) return; // Don't play anything if no note is returned
   moveMotors(note); 
   lightLEDs(note);
-  speaker(note);
-  delay(500); // TODO: update this timing logic to account for variable code delay 
+  speaker(note); 
 }
 
 
@@ -479,11 +490,12 @@ void moveMotors(int note) {
  * Params: int note - the next note to play on the speaker
  * Returns: None
  */
+// #inline-always
 void speaker(int note) {
   //int volumeReading = analogRead(POT);
   //byte pwm = map(volumeReading, 0, 1024, 0, 220);
   //analogWrite(VOL, pwm);
-  tone(VOL, getFrequencyFromNote(note), 500);
+  tone(SPEAKER, getFrequencyFromNote(note), 500);
 }
 
 /* Light LEDs 
