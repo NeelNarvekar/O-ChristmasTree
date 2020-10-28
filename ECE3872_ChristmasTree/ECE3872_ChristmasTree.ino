@@ -42,7 +42,22 @@
 #define G3       195.998  // (11)
 #define Gs3      207.652  // (12)
 
+// Integer Frequencies
+#define A2i      110  // (1)
+#define As2i     117  // (2)
+#define B2i      123  // (3)
+#define C3i      131  // (4)
+#define Cs3i     139  // (5)
+#define D3i      147  // (6)
+#define Ds3i     156  // (7)
+#define E3i      165  // (8)
+#define F3i      175  // (9)
+#define Fs3i     185  // (10)
+#define G3i      196  // (11)
+#define Gs3i     208  // (12)
+
 const float freqs[] = { A2, As2, B2, C3, Cs3, D3, Ds3, E3, F3, Fs3, G3, Gs3 };
+const int freqs_i[] = { A2i, As2i, B2i, C3i, Cs3i, D3i, Ds3i, E3i, F3i, Fs3i, G3i, Gs3i };
 
 // Global variables
 
@@ -162,7 +177,6 @@ void rotaryRecord() {
   Serial.print("RECORD STATE\n");
   // if out of space then hold solid LED
   while (state_var_0 == 1 && state_var_1 == 0) { // enter while loop if room to record
-    
     digitalWrite(STATE_LED, HIGH);
     recordAudioData();
     digitalWrite(STATE_LED, LOW);
@@ -280,15 +294,41 @@ unsigned long read_sonar_cm() {
   return cm; // Distance in cm
 }
 
+/* Get Note Index - int
+ * 
+ * Reads and scaled Sonar distance input to determine index of desired note
+ * Note determined on continuous scale before conversion to note
+ * 
+ * 
+ * Params: None
+ * Returns: int frequency - the rounded frequency value
+ */
+int getNote() {
+  return (read_sonar_cm()- 2)/3;
+}
 
-/* Get Frequency
+/* Get Frequency - int
  * 
  * Reads and scaled Sonar distance input to determine frequency of desired note
  * Frequency determined on continuous scale before conversion to note
  * 
  * 
  * Params: None
- * Returns: int frequency - the raw frequency value TOD
+ * Returns: int frequency - the rounded frequency value
+ */
+int getFrequency_i() {
+  return freqs_i[getNoteIndex()];
+}
+
+
+/* Get Frequency - float
+ * 
+ * Reads and scaled Sonar distance input to determine frequency of desired note
+ * Frequency determined on continuous scale before conversion to note
+ * 
+ * 
+ * Params: None
+ * Returns: float frequency - the raw frequency value
  */
 float getFrequency() {
   // TODO: this function scales notes/frequencies in geometric fashion like a guitar string
