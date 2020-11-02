@@ -37,6 +37,13 @@
 #define YELLOW        6
 #define GREEN         5 
 
+// Values
+#define LIVE          0
+#define RECORDING     1
+#define NOTES_STORED  100
+#define NUM_LEDS      50
+#define MAX_DISTANCE  20.0
+
 #define A2       110.000  // (1)
 #define As2      116.541  // (2)
 #define B2       123.471  // (3)
@@ -81,8 +88,10 @@ void setup() {
   strip.begin();
   strip.clear();
 
-  attachInterrupt(digitalPinToInterrupt(INTERRUPT_1), int_switchLed, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(INTERRUPT_2), int_switchLed, CHANGE);
+  Serial.begin(9600);
+
+//  attachInterrupt(digitalPinToInterrupt(INTERRUPT_1), int_switchLed, CHANGE);
+//  attachInterrupt(digitalPinToInterrupt(INTERRUPT_2), int_switchLed, CHANGE);
   
   // Servo Testing
   servo1.attach(SERVO_1_3); // Pin 6 servo //*/
@@ -95,7 +104,7 @@ void setup() {
   pinMode(SONAR_TRIG, OUTPUT);
   pinMode(SONAR_ECHO, INPUT);
   digitalWrite(SONAR_TRIG, LOW);
-//  Serial.begin(115200); //*/
+   //*/
 }
 
 unsigned long cm = 10;
@@ -143,18 +152,23 @@ void loop() {
   if (noteIdx > -1 && noteIdx < 12) {
     // Start tone
     tone(SPEAKER, (unsigned long) freqs[noteIdx]);
+    
 
     // Lights
-    for (int i = 0; i < NUM_LEDS; ++i) {
-      strip.setPixelColor(i, noteIdx * 24, 15*(i % 15), 255 - 4*i - 4 * noteIdx);
-    }
-    strip.show();
-  
-    // Servo
-    servo1.write(14*noteIdx+5);
-    servo2.write(170 - (14*noteIdx));
+//    for (int i = 0; i < NUM_LEDS; ++i) {
+//      strip.setPixelColor(i, noteIdx * 24, 15*(i % 15), 255 - 4*i - 4 * noteIdx);
+//    }
+//    strip.show();
+//  
+//    // Servo
+//    servo1.write(14*noteIdx+5);
+//    servo2.write(170 - (14*noteIdx));
     
   } else noTone(SPEAKER);
+  
+  Serial.print("Distance: ");
+  Serial.print(cm);
+  Serial.println(" cm");
 
   //Serial.print("Dist: ");
   //Serial.print(cm);

@@ -23,8 +23,8 @@
 #define TESTLED2      7
 
 // Values
-#define LIVE          1
-#define RECORDING     0
+#define LIVE          0
+#define RECORDING     1
 #define NOTES_STORED  100
 #define NUM_LEDS      50
 #define MAX_DISTANCE  20.0 // Furthest distance the Sonar sensor will read (cm)
@@ -87,7 +87,7 @@ void setup() {
   myservo_2_4.attach(SERVO_2_4);
   strip.begin();
   strip.clear();
-  Serial.begin(115200);
+//  Serial.begin(115200);
   pinMode(STOP, INPUT);
 //  pinMode(STATE_LED, OUTPUT);
   pinMode(SONAR_TRIG, OUTPUT);
@@ -157,22 +157,18 @@ void stateMachineHandler() {
     if (state_var_1 == 0) {
       //Serial.println("RESET STATE 0 0");
       reset(); // 0 0 -> RESET STATE
-      ////Serial.print("0 0\n");
     } else {
       //Serial.println("PLAY STATE 0 1");
       rotaryPlay(); // 0 1 -> PLAY STATE
-      ////Serial.print("0 1\n");
     }
   } else {
     if (state_var_1 == 0) {
       //Serial.println("RECORD STATE 1 0");
       rotaryRecord(); // 1 0 -> RECORD STATE
-        ////Serial.print("1 0\n");
     } else {
       if (digitalRead(STOP) == 0) {
         //Serial.println("STOP STATE 1 1");
         rotaryStop(); // 1 1 -> STOP STATE
-        ////Serial.print("1 1\n");
       }
     }
   }
@@ -194,10 +190,12 @@ void rotaryRecord() {
   digitalWrite(TESTLED2, LOW);
   // if out of space then hold solid LED
   while (state_var_0 == 1 && state_var_1 == 0) { // enter while loop if room to record
+     tstart = millis();
 //    digitalWrite(STATE_LED, HIGH);
     digitalWrite(LED_BUILTIN, HIGH);
     recordAudioData();
 //    digitalWrite(STATE_LED, LOW);
+    while (state_var_0 == 1 && state_var_1 == 0 && millis() <= tstart + 500);
   }
   is_recorded_data = true;
 }
@@ -236,9 +234,9 @@ void rotaryPlay() {
   digitalWrite(TESTLED1, LOW);
   digitalWrite(TESTLED2, HIGH);
   while (state_var_0 == 0 && state_var_1 == 1) {
-    digitalWrite(LED_BUILTIN, HIGH);
     // Get start time and note
     tstart = millis();
+    digitalWrite(LED_BUILTIN, HIGH);
 //    digitalWrite(STATE_LED, HIGH);
     int mode = digitalRead(SPDT_PLAYMODE); 
     play(mode); // Non-blocking!
@@ -263,6 +261,7 @@ void reset() {
   tstart = millis();
   digitalWrite(TESTLED1, LOW);
   digitalWrite(TESTLED2, LOW);
+  idx_play = 0;
 //  digitalWrite(RESET_LED, HIGH);
   //Serial.print("RESET STATE\n");
   while (state_var_0 == 0 && state_var_1 == 0) {
@@ -448,26 +447,26 @@ int setNextRecordedNote(int note) {
  * Plays notes from speaker live or from recording based on mode
  * 
  * Params: int mode - read from the slide switch controlling play live or play from recording
- * Returns: None
+ * Returns: Int note - the note that it detected and played
  */
-void play(int mode) {
+int play(int mode) {
   int note;
-  mode = LIVE;
   // Select note from either a recording or live input
   if (mode == LIVE) {
     // Live
     note = getNote();
-//    note = getNoteFromFrequency(getFrequency());
   } else {
     // Recording
     note = getNextRecordedNote();
   } 
   //Serial.print("Play: Note ");
   //Serial.println(note);
-  if (note == -1) return; // Don't play anything if no note is returned
-  moveMotors(note); 
+  if (note == -1) return note; // Don't play anything if no note is returned
   lightLEDs(note);
+  delay(10);
+  moveMotors(note);
   speaker(note); 
+  return note;
 }
 
 
@@ -482,14 +481,13 @@ void play(int mode) {
  */
 void recordAudioData() {
   // Uncomment vvv these vvv for actual hardware
-  float freq = getFrequency();
-  int note = getNoteFromFrequency(freq);
+  int note = play(LIVE);
   // SIMULATION BEHVAIOIR: Record notes in repeating sequence 1-12
   //int note = idx_record % 12 + 1;
   //Serial.print("Record: ");
   //Serial.print(note);
   //Serial.print("\n");
-  if (setNextRecordedNote(note) == -1) {
+  if (note > -1 && setNextRecordedNote(note) == -1) {
      //TODO: what to do if you're out of space?
   }
 }
