@@ -8,19 +8,19 @@
 #define INTERRUPT_1   2 // RESET * PLAY
 #define INTERRUPT_2   3 // RESET * RECORD
  // space for 4?
-#define RESET_LED     5
-#define SERVO_1_3     6
-#define STATE_LED     7
+#define STATE_LED     5
+#define SERVO_2_4     6
+#define RESET_LED     7
  // space for 8! 
  // space for 9!
-#define SERVO_2_4     10
+#define SERVO_1_3     10
 #define SPEAKER       11
 #define STOP          12
 #define LED           13 // Neopixel LED strip
 #define SPDT_PLAYMODE 14
 
-#define TESTLED1      5
-#define TESTLED2      7
+//#define TESTLED1      5
+//#define TESTLED2      7
 
 // Values
 #define LIVE          0
@@ -78,6 +78,7 @@ volatile int recorded_notes[NOTES_STORED];
 volatile unsigned int idx_record = 0;
 volatile unsigned int idx_play = 0; // Check that this idx is in bounds before playing!
 volatile bool is_recorded_data = false;
+volatile bool is_space_remaining = true;
 
 // NOTE! Arduino Nano only has 2,3 as interrupt pins...
 
@@ -89,14 +90,16 @@ void setup() {
   strip.clear();
 //  Serial.begin(115200);
   pinMode(STOP, INPUT);
-//  pinMode(STATE_LED, OUTPUT);
   pinMode(SONAR_TRIG, OUTPUT);
   pinMode(SONAR_ECHO, INPUT);
 
   pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(STATE_LED, OUTPUT);
+  pinMode(RESET_LED, OUTPUT);
 
-  pinMode(TESTLED1, OUTPUT);
-  pinMode(TESTLED2, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH);
+  digitalWrite(STATE_LED, LOW);
+  digitalWrite(RESET_LED, LOW);
   
   pinMode(SPDT_PLAYMODE, INPUT);
   attachInterrupt(digitalPinToInterrupt(INTERRUPT_1), updateStateVar1, CHANGE);
@@ -105,8 +108,6 @@ void setup() {
   eraseRecording();
   updateStateVar1(); 
   updateStateVar2();
-
-//  Serial.print()
 
 }
 
@@ -125,8 +126,6 @@ void loop() {
  */
 void updateStateVar1() {
   state_var_0 = digitalRead(INTERRUPT_1);
-//  digitalWrite(STATE_LED, LOW);
-//  digitalWrite(RESET_LED, LOW);
 }
 
 /* Update State Var 2
@@ -139,8 +138,6 @@ void updateStateVar1() {
  */
 void updateStateVar2() {
   state_var_1 = digitalRead(INTERRUPT_2);
-//  digitalWrite(STATE_LED, LOW);
-//  digitalWrite(RESET_LED, LOW);
 }
 
 /* State Machine Handler
@@ -151,7 +148,6 @@ void updateStateVar2() {
  * Returns: None
  */
 void stateMachineHandler() {
-  digitalWrite(LED_BUILTIN, LOW);
   // Reads variables corresponding to INT1=REST*PLAY and INT2=RESET*RECORD 
   if (state_var_0 == 0) {
     if (state_var_1 == 0) {
@@ -185,18 +181,17 @@ void stateMachineHandler() {
  * Returns: None
  */
 void rotaryRecord() {
-  ////Serial.print("RECORD STATE\n");
-  digitalWrite(TESTLED1, HIGH);
-  digitalWrite(TESTLED2, LOW);
-  // if out of space then hold solid LED
+  // Blink when recording, except if out of space then turn off LED
   while (state_var_0 == 1 && state_var_1 == 0) { // enter while loop if room to record
-     tstart = millis();
-//    digitalWrite(STATE_LED, HIGH);
-    digitalWrite(LED_BUILTIN, HIGH);
+    tstart = millis();
+    digitalWrite(STATE_LED, is_space_remaining ? HIGH : LOW);
     recordAudioData();
-//    digitalWrite(STATE_LED, LOW);
+    // Wait till 250ms have passed to turn state LED off for blinking
+    while (state_var_0 == 1 && state_var_1 == 0 && millis() <= tstart + 250);
+    digitalWrite(STATE_LED, LOW); // Blink LED
     while (state_var_0 == 1 && state_var_1 == 0 && millis() <= tstart + 500);
   }
+  digitalWrite(STATE_LED, LOW);
   is_recorded_data = true;
 }
 
@@ -210,11 +205,10 @@ void rotaryRecord() {
  * Returns: None
  */
 void rotaryStop() {
-  digitalWrite(TESTLED1, HIGH);
-  digitalWrite(TESTLED2, HIGH);
   ////Serial.print("STOP STATE\n");
+  digitalWrite(STATE_LED, LOW);
+  digitalWrite(LED_BUILTIN, LOW);
   while (state_var_0 == 1 && state_var_1 == 1) {
-    digitalWrite(LED_BUILTIN, HIGH);
      // Should we do anything in stop?
   }
 }
@@ -231,20 +225,17 @@ void rotaryStop() {
 void rotaryPlay() {
   ////Serial.print("PLAY STATE\n");
   // OUTER LOOP OCCURS EVERY 500 MILLISECONDS
-  digitalWrite(TESTLED1, LOW);
-  digitalWrite(TESTLED2, HIGH);
   while (state_var_0 == 0 && state_var_1 == 1) {
     // Get start time and note
     tstart = millis();
-    digitalWrite(LED_BUILTIN, HIGH);
-//    digitalWrite(STATE_LED, HIGH);
+    digitalWrite(STATE_LED, HIGH);
     int mode = digitalRead(SPDT_PLAYMODE); 
-    play(mode); // Non-blocking!
+    if (play(mode) == -1) digitalWrite(STATE_LED, LOW);
     // Spin until state change or time for next note
     while (state_var_0 == 0 && state_var_1 == 1 && millis() <= tstart + 500);
   }
   // Exit state code - turn off LED and stop the tone
-//  digitalWrite(STATE_LED, LOW);
+  digitalWrite(STATE_LED, LOW);
   noTone(SPEAKER);
 }
 
@@ -259,24 +250,38 @@ void rotaryPlay() {
  */
 void reset() {
   tstart = millis();
-  digitalWrite(TESTLED1, LOW);
-  digitalWrite(TESTLED2, LOW);
+  digitalWrite(RESET_LED, HIGH);
   idx_play = 0;
-//  digitalWrite(RESET_LED, HIGH);
+  myservo_1_3.write(90);
+  delay(5);
+  myservo_2_4.write(90);
+  delay(25);
+  for (int i = 0; i < NUM_LEDS; ++i) {
+    strip.setPixelColor(i, 32 + i * 4, 128, 228 - 4 * i);
+  }
+  strip.show();
   //Serial.print("RESET STATE\n");
   while (state_var_0 == 0 && state_var_1 == 0) {
-    digitalWrite(LED_BUILTIN, HIGH);
     // if reset held down for > 3s, recording erased
     if (is_recorded_data && millis() >= tstart + 3000) { 
       //Serial.print("ERASING RECORDING\n");
       eraseRecording();
-//      digitalWrite(RESET_LED, LOW);
+      // Blink 3 times to show recording erased
+      digitalWrite(RESET_LED, LOW);
       delay(100);
-//      digitalWrite(RESET_LED, HIGH);
+      digitalWrite(RESET_LED, HIGH);
+      delay(100);
+      digitalWrite(RESET_LED, LOW);
+      delay(100);
+      digitalWrite(RESET_LED, HIGH);
+      delay(100);
+      digitalWrite(RESET_LED, LOW);
+      delay(100);
+      digitalWrite(RESET_LED, HIGH);
     }
   }
-  // Exit state cleanup
-//  digitalWrite(RESET_LED, LOW);
+  // Exit state cleanup - turn off Reset LED
+  digitalWrite(RESET_LED, LOW);
 }
 
 
@@ -295,6 +300,7 @@ void eraseRecording() {
   idx_record = 0;
   idx_play = 0;
   is_recorded_data = false;
+  is_space_remaining = true;
   for (int i = 0; i < NOTES_STORED; ++i) {
     recorded_notes[i] = 0;
   }
@@ -315,8 +321,6 @@ unsigned long read_sonar_cm() {
   delayMicroseconds(10);
   digitalWrite(SONAR_TRIG, LOW);
   unsigned long cm = pulseIn(SONAR_ECHO, HIGH, 300000) / 58;
-//  //Serial.print(cm);
-//  //Serial.print(" cm - ");
   return cm; // Distance in cm
 }
 
@@ -332,7 +336,6 @@ unsigned long read_sonar_cm() {
 int getNote() {
   unsigned long cm = read_sonar_cm();
   int note = (cm-2)/3;
-//  int note = (read_sonar_cm()- 2)/3;
   if (note < 1 || note > 12) note = -1;
   return note;
 }
@@ -361,7 +364,7 @@ inline int getFrequency_i() {
  * Returns: float frequency - the raw frequency value
  */
 float getFrequency() {
-  // TODO: this function scales notes/frequencies in geometric fashion like a guitar string
+  // This function scales notes/frequencies in geometric fashion like a guitar string
   //  Should it be changed to provide a linear relationship between distance and note?
   float freq = 107.0 * (((float) read_sonar_cm()) / MAX_DISTANCE) + 108.0;
   return freq;
@@ -435,9 +438,9 @@ int getNextRecordedNote() {
 int setNextRecordedNote(int note) {
   if (idx_record < NOTES_STORED) {
     recorded_notes[idx_record++] = note;
-    ////Serial.print(idx_record);
     return 0;
   }
+    is_space_remaining = false;
     return -1; // Error code
 }
 
@@ -477,10 +480,9 @@ int play(int mode) {
  * Calculates current frequency, retrieves the note, and stores it
  * 
  * Params: None
- * Returns: None
+ * Returns: int storageStatus: 0 if all clear, -1 if out of space
  */
-void recordAudioData() {
-  // Uncomment vvv these vvv for actual hardware
+int recordAudioData() {
   int note = play(LIVE);
   // SIMULATION BEHVAIOIR: Record notes in repeating sequence 1-12
   //int note = idx_record % 12 + 1;
@@ -488,8 +490,9 @@ void recordAudioData() {
   //Serial.print(note);
   //Serial.print("\n");
   if (note > -1 && setNextRecordedNote(note) == -1) {
-     //TODO: what to do if you're out of space?
+     return -1;
   }
+  return 0;
 }
 
 /* Move Motors
@@ -502,8 +505,8 @@ void recordAudioData() {
  */
 void moveMotors(int note) {
 //  //Serial.print("Move Motors\n");
-  myservo_1_3.write(82.5+7.5*note);
-  myservo_2_4.write(97.5-7.5*note);
+  myservo_1_3.write(5+14*note);
+  myservo_2_4.write(175-14*note);
     switch(note) {
     case 1: 
       break;
@@ -530,8 +533,8 @@ void moveMotors(int note) {
     case 12: 
       break;
      default:
-      myservo_1_3.write(0);
-      myservo_2_4.write(0);
+      myservo_1_3.write(90);
+      myservo_2_4.write(90);
       break;
     }
   return;
@@ -563,7 +566,7 @@ void lightLEDs(int note) {
   //Serial.print("\n");
   strip.clear();
   for (int i = 0; i < NUM_LEDS; ++i) {
-    strip.setPixelColor(i, note * 24, 15*(i % 15), 255 - 4*i - 4 * note);
+    strip.setPixelColor(i, note * 24, 255 - 4*i - 4 * note, 15*(i % 15));
   }
   strip.show();
   /*
