@@ -505,8 +505,8 @@ int recordAudioData() {
  */
 void moveMotors(int note) {
 //  //Serial.print("Move Motors\n");
-  myservo_1_3.write(5+14*note);
-  myservo_2_4.write(175-14*note);
+  myservo_1_3.write(25+10*note);
+  myservo_2_4.write(155-10*note);
     switch(note) {
     case 1: 
       break;
