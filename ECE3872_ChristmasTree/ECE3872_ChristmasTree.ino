@@ -26,7 +26,7 @@
 #define LIVE          0
 #define RECORDING     1
 #define NOTES_STORED  100
-#define NUM_LEDS      50
+#define NUM_LEDS      19
 #define MAX_DISTANCE  20.0 // Furthest distance the Sonar sensor will read (cm)
 
 
@@ -80,6 +80,9 @@ volatile unsigned int idx_play = 0; // Check that this idx is in bounds before p
 volatile bool is_recorded_data = false;
 volatile bool is_space_remaining = true;
 
+int servoPos_1_3 = 90;
+int servoPos_2_4 = 90;
+
 // NOTE! Arduino Nano only has 2,3 as interrupt pins...
 
 void setup() {
@@ -108,6 +111,9 @@ void setup() {
   eraseRecording();
   updateStateVar1(); 
   updateStateVar2();
+
+  myservo_1_3.write(servoPos_1_3);
+  myservo_2_4.write(servoPos_2_4);
 
 }
 
@@ -252,12 +258,30 @@ void reset() {
   tstart = millis();
   digitalWrite(RESET_LED, HIGH);
   idx_play = 0;
-  myservo_1_3.write(90);
-  delay(5);
-  myservo_2_4.write(90);
+  
+  // Write the servos back to 90
+  int finalPos_1_3 = 90;
+  int finalPos_2_4 = 90;
+  int step_1_3 = (finalPos_1_3 - servoPos_1_3)/10;
+  int step_2_4 = (finalPos_2_4 - servoPos_2_4)/10;
+  for (int i = 0; i < 9; ++i) {
+    servoPos_1_3 += step_1_3;
+    myservo_1_3.write(servoPos_1_3);
+    delay(10);
+    servoPos_2_4 += step_2_4;
+    myservo_2_4.write(servoPos_1_3);
+    delay(10);
+  }
+  servoPos_1_3 = finalPos_1_3;
+  myservo_1_3.write(servoPos_1_3);
+  delay(10);
+  servoPos_2_4 = finalPos_2_4;
+  myservo_2_4.write(servoPos_1_3);
+
+  // Delay to ensure the LEDs don't spike the power
   delay(25);
   for (int i = 0; i < NUM_LEDS; ++i) {
-    strip.setPixelColor(i, 32 + i * 4, 128, 228 - 4 * i);
+    strip.setPixelColor(i, 32 + i * 4, 168, 228 - 4 * i);
   }
   strip.show();
   //Serial.print("RESET STATE\n");
@@ -467,8 +491,8 @@ int play(int mode) {
   if (note == -1) return note; // Don't play anything if no note is returned
   lightLEDs(note);
   delay(10);
-  moveMotors(note);
   speaker(note); 
+  moveMotors(note);
   return note;
 }
 
@@ -484,11 +508,6 @@ int play(int mode) {
  */
 int recordAudioData() {
   int note = play(LIVE);
-  // SIMULATION BEHVAIOIR: Record notes in repeating sequence 1-12
-  //int note = idx_record % 12 + 1;
-  //Serial.print("Record: ");
-  //Serial.print(note);
-  //Serial.print("\n");
   if (note > -1 && setNextRecordedNote(note) == -1) {
      return -1;
   }
@@ -505,8 +524,24 @@ int recordAudioData() {
  */
 void moveMotors(int note) {
 //  //Serial.print("Move Motors\n");
-  myservo_1_3.write(25+10*note);
-  myservo_2_4.write(155-10*note);
+  // Move 
+  int finalPos_1_3 = 25+10*note;
+  int finalPos_2_4 = 155-10*note;
+  int step_1_3 = (finalPos_1_3 - servoPos_1_3)/10;
+  int step_2_4 = (finalPos_2_4 - servoPos_2_4)/10;
+  for (int i = 0; i < 9; ++i) {
+    servoPos_1_3 += step_1_3;
+    myservo_1_3.write(servoPos_1_3);
+    delay(10);
+    servoPos_2_4 += step_2_4;
+    myservo_2_4.write(servoPos_1_3); // Changed from 2-4 to 1-3
+    delay(10);
+  }
+  servoPos_1_3 = finalPos_1_3;
+  myservo_1_3.write(servoPos_1_3);
+  delay(10);
+  servoPos_2_4 = finalPos_1_3;
+  myservo_2_4.write(servoPos_1_3); // Changed from 2-4 to 1-3
     switch(note) {
     case 1: 
       break;
@@ -548,9 +583,6 @@ void moveMotors(int note) {
  */
 // #inline-always
 void speaker(int note) {
-  //int volumeReading = analogRead(POT);
-  //byte pwm = map(volumeReading, 0, 1024, 0, 220);
-  //analogWrite(VOL, pwm);
   tone(SPEAKER, getFrequencyFromNote(note), 500);
 }
 
@@ -566,7 +598,8 @@ void lightLEDs(int note) {
   //Serial.print("\n");
   strip.clear();
   for (int i = 0; i < NUM_LEDS; ++i) {
-    strip.setPixelColor(i, note * 24, 255 - 4*i - 4 * note, 15*(i % 15));
+    // GRB
+    strip.setPixelColor(i, (note + i % 2) * 200 + 6*(i % 8), ((note+i+1) % 2)*200 + 12*(i % 4), 7*(i % 16));
   }
   strip.show();
   /*
