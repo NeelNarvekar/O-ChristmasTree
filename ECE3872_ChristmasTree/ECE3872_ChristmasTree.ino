@@ -1,26 +1,19 @@
 #include <Adafruit_NeoPixel.h>
 #include <Servo.h>
-//#include <Tone.h>
 
 // Digital Pin Definitions
 #define SONAR_ECHO    0
 #define SONAR_TRIG    1
 #define INTERRUPT_1   2 // RESET * PLAY
 #define INTERRUPT_2   3 // RESET * RECORD
- // space for 4?
 #define STATE_LED     5
 #define SERVO_2_4     6
 #define RESET_LED     7
- // space for 8! 
- // space for 9!
 #define SERVO_1_3     10
 #define SPEAKER       11
 #define STOP          12
 #define LED           13 // Neopixel LED strip
 #define SPDT_PLAYMODE 14
-
-//#define TESTLED1      5
-//#define TESTLED2      7
 
 // Values
 #define LIVE          0
@@ -83,15 +76,14 @@ volatile bool is_space_remaining = true;
 int servoPos_1_3 = 90;
 int servoPos_2_4 = 90;
 
-// NOTE! Arduino Nano only has 2,3 as interrupt pins...
-
 void setup() {
   // Set GPIO pins to their proper mode
   myservo_1_3.attach(SERVO_1_3);
   myservo_2_4.attach(SERVO_2_4);
+
   strip.begin();
   strip.clear();
-//  Serial.begin(115200);
+
   pinMode(STOP, INPUT);
   pinMode(SONAR_TRIG, OUTPUT);
   pinMode(SONAR_ECHO, INPUT);
@@ -157,19 +149,15 @@ void stateMachineHandler() {
   // Reads variables corresponding to INT1=REST*PLAY and INT2=RESET*RECORD 
   if (state_var_0 == 0) {
     if (state_var_1 == 0) {
-      //Serial.println("RESET STATE 0 0");
       reset(); // 0 0 -> RESET STATE
     } else {
-      //Serial.println("PLAY STATE 0 1");
       rotaryPlay(); // 0 1 -> PLAY STATE
     }
   } else {
     if (state_var_1 == 0) {
-      //Serial.println("RECORD STATE 1 0");
       rotaryRecord(); // 1 0 -> RECORD STATE
     } else {
       if (digitalRead(STOP) == 0) {
-        //Serial.println("STOP STATE 1 1");
         rotaryStop(); // 1 1 -> STOP STATE
       }
     }
@@ -486,8 +474,6 @@ int play(int mode) {
     // Recording
     note = getNextRecordedNote();
   } 
-  //Serial.print("Play: Note ");
-  //Serial.println(note);
   if (note == -1) return note; // Don't play anything if no note is returned
   lightLEDs(note);
   delay(10);
@@ -523,7 +509,6 @@ int recordAudioData() {
  * Returns: None
  */
 void moveMotors(int note) {
-//  //Serial.print("Move Motors\n");
   // Move 
   int finalPos_1_3 = 25+10*note;
   int finalPos_2_4 = 155-10*note;
@@ -581,7 +566,6 @@ void moveMotors(int note) {
  * Params: int note - the next note to play on the speaker
  * Returns: None
  */
-// #inline-always
 void speaker(int note) {
   tone(SPEAKER, getFrequencyFromNote(note), 500);
 }
@@ -593,9 +577,6 @@ void speaker(int note) {
  * Returns: None
  */
 void lightLEDs(int note) {
-  //Serial.print("LEDs: note ");
-  //Serial.print(note);
-  //Serial.print("\n");
   strip.clear();
   for (int i = 0; i < NUM_LEDS; ++i) {
     // GRB
